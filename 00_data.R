@@ -1,0 +1,52 @@
+##constructing the high school attendance data is going to be a problem
+##homelessness?
+##am i computing an overall growth measure for 2022-2025 or one per year?
+##school_code_enr
+##check for individual-level duplicates
+##lots of NAs for grade/year/school?
+
+x<-read.csv("growth-interim-all.csv")
+
+x$grade<-as.numeric(x$grade_level_code)
+x$year<-x$spring_year
+x$id<-as.character(x$state_student_id)
+
+##make separate math and reading datasets
+keep<-c("district_code_enr", "school_code_enr", "school_name", "year", 
+        "state_student_id", "enrollment_start_date", "enrollment_exit_date", 
+        "enrollment_status_code", "census", "consecutive_enr_days", "grade_level_code", 
+        "race_eth_rollup", "no_hs_parent_sed_elig", "free_or_reduced", 
+        "core_hmls", "core_fst", "migrant", "tribal_foster_youth", "direct_certification", 
+        "core_swd", "disability_1_code", "disability_2_code", "elas_status_code", 
+        "elas_start_date", "elpac_level", "school_level", "core_sd", 
+        "core_aahisd", "core_ai", "core_as", "core_aa", "core_fi", "core_hi", 
+        "core_mr", "core_pi", "core_wh", "cds_code_enr", "core_sdinv", 
+        "ell_level", "core_elp", "core_elrfep", "reclass_year", "core_el", 
+        "core_entity", "sub_entity", "school_id", "stu_count", "core_all", 
+        "first_test_date", "grade","id")
+
+for (nm in c("_ela","_math")) {
+    ##Additionally, all models control for disability, English language learner, economic disadvantage, foster care, and homelessness statuses at the student level. 
+    i<-grep(nm,names(x))
+    df<-x[,c(keep,names(x)[i])]
+    names(df)<-sub(nm,'',names(df))
+    ##lag score and prior year mean
+    x0<-df[,c("id","year","grade","scale_score")]
+    x0$year<-x0$year+1
+    x0<-x0[!is.na(x0$scale_score),]
+    names(x0)[3:4]<-paste("lag_",names(x0)[3:4],sep='')
+    df<-merge(df,x0,all=TRUE) #this will break grade 11
+    ##prior year mean
+    df$tmp.id<-paste(df$year,df$grade,df$school_code_enr)
+    x0<-df[,c("tmp.id","year","grade","school_code","lag_scale_score")]
+    rm<-rowMeans(is.na(x0[,2:4]))
+    x0<-x0[rm==0,]
+    m1<-by(x0$lag_scale_score,x0$tmp.id,mean,na.rm=TRUE)
+    m2<-by(x0$lag_scale_score,x0$tmp.id,function(x) length(x[!is.na(x)]))
+    z<-data.frame(tmp.id=names(m1),lag_mean=unlist(m1))
+    z2<-data.frame(tmp.id=names(m2),lag_mean_N=unlist(m2))
+    z<-merge(z,z2)
+    df<-merge(df,z)
+    ##
+    df<-df[df$grade %in% c(3:8,11) & !is.na(df$grade),]
+
