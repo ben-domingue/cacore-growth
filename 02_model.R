@@ -11,7 +11,7 @@ library(mecor)
 ids<-sample(unique(df$school_code),200)
 df<-df[df$school_code %in% ids,]
 
-z<-df[,c("school_code","scale_score","lag_scale_score")]
+z<-df[,c("school_code","scale_score","lag_scale_score","alt_lag_scale_score")]
 df0<-df[rowSums(is.na(z))==0,] #just for analysis
 rm("df") ##just to ensure i don't use it
 std<-function(x) (x-mean(x,na.rm=TRUE))/sd(x,na.rm=TRUE)
@@ -51,7 +51,7 @@ if ("homeless__missing" %in% names(df0) & all(df0$homeless__missing==df0$foster_
 ii<-grep("^schoolid",names(df0))
 ii<-ii[-1] #to ensure no collinearity problem with schools
 fm<-paste(
-    "scale_score~MeasErrorRandom(lag_scale_score,var(lag_scale_score,na.rm=TRUE)*(1-reliability))+lag_mean+",
+    "scale_score~MeasErrorRandom(lag_scale_score,var(lag_scale_score,na.rm=TRUE)*(1-reliability))+alt_lag_scale_score+lag_mean+",
     paste(fm.list,collapse="+"),
     "+",
     paste(names(df0)[ii],collapse='+'),sep=''

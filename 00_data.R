@@ -27,15 +27,6 @@ keep<-c("district_code", "school_code", "school_name",
         "race_pi", "race_na", "race_wh", "cds_code", "disability_type", 
         "ell_level", "core_elp", "core_elrfep", "reclass_year", "core_el", 
         "core_entity", "sub_entity", "first_test_date",
-        #"cds_code_ela", 
-        #"district_code_ela", "school_code_ela", "grade_assessed_ela", 
-        #"achievement_levels_ela", "scale_score_ela", "std_error_msmt_ela", 
-        #"cds_code_math", "district_code_math", "school_code_math", "grade_assessed_math", 
-        #"achievement_levels_math", "scale_score_math", "std_error_msmt_math", 
-        #"same_enr_test_school", "cds_code_census", "census_school", "enr_test_flag", 
-        #"l1_grade_level_code", "l1_scale_score_ela", "l1_std_error_msmt_ela", 
-        #"l1_grade_assessed_ela", "l1_grade_assessed_math", "l1_scale_score_math", 
-                                        #"l1_std_error_msmt_math",
         "year", "id","grade")
 
 
@@ -46,21 +37,29 @@ for (nm in c("_ela","_math")) {
     df<-x[,c(keep,names(x)[i])]
     names(df)<-sub(nm,'',names(df))
     schools<-df[,c("id","school_code","year","grade")] #save for computation of prior-year means
+    ##mucking with grades for 11
+    df<-df[df$grade %in% c(3:8,11) & !is.na(df$grade),]
+    df$pretest.year<-ifelse(df$grade==11,df$year-3,df$year-1)
     ##lag score and prior year mean
     xx<-c("id","year","grade")
     xx<-c(xx,ifelse(nm=="_ela","ela_scale_score","math_scale_score"))
     x0<-sc[,xx]
     names(x0)[4]<-'scale_score'
-    x0$year<-x0$year+1
-    x0<-x0[!is.na(x0$scale_score),]
+    names(x0)[3]<-'pretest.grade'
+    names(x0)[2]<-'pretest.year'
     names(x0)[3:4]<-paste("lag_",names(x0)[3:4],sep='')
+    ##alt lag
+    if (nm=="_ela") altlag<-sc$math_scale_score else altlag<-sc$ela_scale_score
+    x0$alt_lag_scale_score<-altlag
+    ##
+    x0<-x0[!is.na(x0$lag_scale_score),]
     df<-merge(df,x0,all.x=TRUE) #this will break grade 11
     ##prior year mean
     xx<-c("id","year")
     xx<-c(xx,ifelse(nm=="_ela","ela_scale_score","math_scale_score"))
     x0<-sc[,xx]
     names(x0)[3]<-'scale_score'
-    x0$year<-x0$year+1
+    names(x0)[2]<-'pretest.year'
     x0<-x0[!is.na(x0$scale_score),]
     sch<-merge(schools,x0)
     sch$tmp.id<-paste(sch$year,sch$grade,sch$school_code)
@@ -73,7 +72,6 @@ for (nm in c("_ela","_math")) {
     df<-merge(df,z)
     df$tmp.id<-NULL
     ##
-    df<-df[df$grade %in% c(3:8,11) & !is.na(df$grade),]
     save(df,file=paste(nm,".Rdata",sep=''))
 }
 
