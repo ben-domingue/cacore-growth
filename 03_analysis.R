@@ -4,7 +4,7 @@ load("_estimates.Rdata")
 par(mfrow=c(1,2),mgp=c(2,1,0),mar=c(3,3,1,1),oma=rep(1,4))
 for (i in 1:length(estimates)) {
     z<-estimates[[i]]
-    plot(density(z[[2]]$eb),col='blue',lwd=2,main='',xlim=c(-.3,.3))
+    plot(density(z[[2]]$eb),col='blue',lwd=2,main='',xlim=c(-.7,.7))
     mtext(side=3,line=0,names(estimates)[i])
 }
 

@@ -8,12 +8,14 @@
 - 06_oos.R
 
 ## issues
+- update all files as per bel's slack message
+- triple checks scores/years/grades/lags
+- double check lag mean computation
 - highschool: 
   - need to partition credit in VA
   - need to do shrinkage
-- triple checks scores/years/grades/lags
-- double check lag mean computation
 - start writing up analysis of the results
+- update _ela.Rdata and _math.Rdata files on nero for bel
 
 asked of group:
-- what are the student-level residuals that they want? are they from model 1 2 or 3? 
+- what are the student-level residuals that they want? are they from model 1 2 or 3? [will need to save these]

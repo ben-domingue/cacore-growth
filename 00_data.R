@@ -83,4 +83,23 @@ table(df$l1_scale_score==df$lag_scale_score)
 load("_math.Rdata")
 table(df$l1_scale_score==df$lag_scale_score)
 
-    
+
+##the dang juniors
+x<-read.csv("grade-11-students-schools.csv")
+##only those in 11th grade the right year
+ids<-x$state_student_id[x$spring_year==2025 & x$grade_level_code==11]
+x<-x[x$state_student_id %in% ids,]
+##just the 3 years ending in 2025
+x<-x[x$spring_year %in% 2023:2025,]
+##
+L<-split(x,x$state_student_id)
+z<-sapply(L,function(x) paste(sort(x$spring_year),collapse=" "))
+table(z)/length(z)
+f<-function(x) {
+    i<-match(2023:2025,x$spring_year)
+    x$school_code[i]
+}
+y<-lapply(L,f)
+g11<-data.frame(do.call("rbind",y))
+g11$id<-names(y)
+save(g11,file="_g11.Rdata")
