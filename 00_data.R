@@ -72,6 +72,7 @@ for (nm in c("_ela","_math")) {
     df<-merge(df,z)
     df$tmp.id<-NULL
     ##
+    df$subject<-nm
     save(df,file=paste(nm,".Rdata",sep=''))
 }
 

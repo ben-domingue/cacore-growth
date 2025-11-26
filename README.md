@@ -16,8 +16,6 @@
 - note that EA did turn things into percentile equivalents
 
 ## questions for core
-- what are deliverables
-- need to confirm that they want something similar to the results documented in EA report [see email, one growth estimate per year so will need to residualize] not sgp
 
 ## questions for bel
 - check computation with agg_caaspp.csv [any duplicates?]
