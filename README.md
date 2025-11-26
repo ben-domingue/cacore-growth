@@ -4,18 +4,16 @@
 - 00_data.R preparing the data for analysis
 - 01_descriptives.R descriptive statistics
 - 02_model.R running basic growth model
+- 03_analysis.R analysis of the growth estimates
 - 06_oos.R
 
-
 ## issues
-- NEED RELIABILITIES
 - highschool: 
   - need to partition credit in VA
   - need to do shrinkage
 - triple checks scores/years/grades/lags
-- note that EA did turn things into percentile equivalents
+- double check lag mean computation
+- start writing up analysis of the results
 
-## questions for core
-
-## questions for bel
-- check computation with agg_caaspp.csv [any duplicates?]
+asked of group:
+- what are the student-level residuals that they want? are they from model 1 2 or 3? 

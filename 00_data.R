@@ -76,4 +76,11 @@ for (nm in c("_ela","_math")) {
     save(df,file=paste(nm,".Rdata",sep=''))
 }
 
+##qc
+##l1_ from bel, #lag_ from ben
+load("_ela.Rdata")
+table(df$l1_scale_score==df$lag_scale_score)
+load("_math.Rdata")
+table(df$l1_scale_score==df$lag_scale_score)
+
     
