@@ -1,5 +1,5 @@
 
-growth<-function(df,reliability=0.9,sampling=NULL) {
+growth<-function(df,reliability=0.9,sampling=NULL,g11) {
     library(mecor)
     ##sampling
     if (!is.null(sampling)) {
@@ -12,8 +12,48 @@ growth<-function(df,reliability=0.9,sampling=NULL) {
     std<-function(x) (x-mean(x,na.rm=TRUE))/sd(x,na.rm=TRUE)
     df0$scale_score<-std(df0$scale_score)
     ##school matrix
-    ids<-unique(df0$school_code)
-    for (id in ids) df0[[paste("schoolid_",id,sep='')]]<-as.numeric(df0$school_code==id)
+    jrs<-df0[df0$grade==11,]
+    oth<-df0[df0$grade<11,]
+    f<-function(df0) { #for oth
+        ids<-unique(df0$school_code)
+        ss<-data.frame(matrix(0,nrow=nrow(df0),ncol=length(ids)))
+        names(ss)<-paste("schoolid_",ids,sep='')
+        for (id in ids) ss[[paste("schoolid_",id,sep='')]]<-as.numeric(df0$school_code==id)
+        ss
+    }
+    ss.oth<-f(oth)
+    ss.oth$id<-oth$id
+    ##now juniors
+    f<-function(jrs,g11) {
+        g11.tmp<-g11[g11$id %in% jrs$id,]
+        ids<-c(g11.tmp[,1],g11.tmp[,2],g11.tmp[,3])
+        ids<-unique(ids)
+        ids<-ids[!is.na(ids)]
+        ss<-data.frame(matrix(0,nrow=nrow(g11.tmp),ncol=length(ids)))
+        names(ss)<-paste("schoolid_",ids,sep='')
+        for (i in 1:nrow(g11.tmp)) {
+            index<-match(paste("schoolid_",g11.tmp[i,1:3],sep=""),names(ss))
+            index<-index[!is.na(index)]
+            for (j in index) ss[i,j]<-ss[i,j]+1
+        }
+        for (i in 1:ncol(ss)) ss[,i]<-ss[,i]/3
+        ss<-ss[,colSums(ss)>1] ##those with super small samples are just going to cause problems
+        ss$id<-g11.tmp$id
+        ss
+    }
+    ss.jrs<-f(jrs,g11)
+    ##put in spare columns, merge in ss, and the recombine
+    n1<-names(ss.oth)
+    n2<-names(ss.jrs)
+    nms<-union(n1,n2)
+    for (nm in nms) {
+        if (!(nm %in% n1)) ss.oth[,nm]<-0
+        if (!(nm %in% n2)) ss.jrs[,nm]<-0
+    }
+    oth<-merge(oth,ss.oth[,nms])
+    jrs<-merge(jrs,ss.jrs[,nms])
+    df0<-data.frame(rbind(oth,jrs))
+    ##
     ##Aditionally, all models control for disability, English language learner, economic disadvantage, foster care, and homelessness statuses at the student level. 
     fm.base<-c("disability_type",
                "ell_level",
@@ -90,21 +130,53 @@ growth<-function(df,reliability=0.9,sampling=NULL) {
     ## the schools' "true" effects 𝛼 𝑗 . It also estimates what the variance across schools of the
     ## unshrunk school growth estimates 𝛼̂ 𝑗 would be if each school had an extremely large number
     ## of students to the point of sampling error being ignorable.
-    library(Hmisc)
-    var.alpha<-wtd.var(co$fe,co$n)
-    mean.se<-wtd.mean(co$se^2,co$n)
-    omega<-var.alpha-mean.se
-    co$eb<-co$fe*(omega/(omega+co$se^2))
+    shrink.univariate<-function(co) {
+        library(Hmisc)
+        var.alpha<-wtd.var(co$fe,co$n)
+        mean.se<-wtd.mean(co$se^2,co$n)
+        omega<-var.alpha-mean.se
+        co$eb<-co$fe*(omega/(omega+co$se^2))
+        co$eb.se<-co$se*(omega/(omega+co$se^2))
+        return(co)
+    }
+    ##
+    shrink.matrix<-function(co,m3=m3) {
+        alpha<-matrix(co$fe,ncol=1)
+        mat<-vcov(m3)
+        ii<-match(rownames(co),rownames(mat))
+        sig<-mat[ii,ii]
+        var.alpha<-wtd.var(co$fe,co$n)
+        mean.se<-wtd.mean(co$se^2,co$n)
+        omega<-var.alpha-mean.se
+        I<-diag(nrow(sig))
+        co$eb<-(omega^2*I) %*% solve(omega^2*I+sig) %*% alpha
+        co$eb.se<-sqrt(diag((omega^2*I) %*% solve(omega^2*I+sig) %*% sig))
+        return(co)
+    }
+    ##
+    test<-grepl("__",rownames(co)) #figure out if this includes grade 11 estimates that need to be managed serparately
+    if (all(!test)) {
+        co<-shrink.univariate(co) ##for the school-wide estimates
+    } else {
+        ##for the schoolXgrade estimates
+        x1<-shrink.univariate(co[test,])
+        x2<-shrink.matrix(co[!test,],m3=m3)
+        co<-data.frame(rbind(x1,x2))
+    }
     ##conversion to percentiles
     m<-mean(co$eb)
     s<-sd(co$eb)
     co$per<-pnorm(co$eb,m,s)
+    co
+    ##
     return(co)
 }
 
+load("_g11.Rdata")
 ##reliabilities, see table 8.3. https://www.cde.ca.gov/ta/tg/ca/documents/sbcaaspptechrpt24.docx
 reliabilities<-c(`_ela`=0.88,`_math`=0.9)
 estimates<-list()
+
 for (nm in c("_ela","_math")) {
     load(paste(nm,".Rdata",sep=''))
     ##
@@ -112,19 +184,15 @@ for (nm in c("_ela","_math")) {
     df<-df[df$grade>3,]
     ##analysis by school
     print(1)
-    co<-growth(df,reliability=reliabilities[nm])
+    co<-growth(df,reliability=reliabilities[nm],g11=g11,sampling=50)
     ##analysis by schoolXgrade
     print(2)
     df$school_original<-df$school_code
     df$school_code<-paste(df$school_original,df$grade,sep='__')
-    co.grade<-growth(df,reliability=reliabilities[nm])
+    co.grade<-growth(df,reliability=reliabilities[nm],g11=g11,sampling=50)
     ##
     estimates[[nm]]<-list(co=co,co.grade=co.grade)
 }
 
 save(estimates,file="_estimates.Rdata")
 
-## par(mfrow=c(1,3),mgp=c(2,1,0),mar=c(3,3,1,1))
-##     plot(co$n,co$fe)
-##     plot(co$fe,co$eb)
-##     plot(co$n,co$eb/co$fe)

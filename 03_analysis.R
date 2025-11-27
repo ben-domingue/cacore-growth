@@ -33,6 +33,7 @@ load("_ela.Rdata")
 df<-df[df$year==2025,]
 df<-df[df$grade>3,]
 df$school_code<-paste(df$school_code,df$grade,sep='__')
+df$delta<-df$scale_score-df$lag_scale_score
 vars<-c( #"free_or_reduced", 
     #"homeless", "foster",
                                         #"sped_flag", "elpac_level",
@@ -41,7 +42,7 @@ vars<-c( #"free_or_reduced",
   "race_pi", "race_na", "race_wh", #"disability_type", 
                                         #"ell_level",
   "scale_score", 
-  "lag_scale_score")
+  "lag_scale_score","delta")
 xx<-df[,vars]
 xx<-split(xx,df$school_code)
 xx<-lapply(xx,colMeans,na.rm=TRUE)

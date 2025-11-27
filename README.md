@@ -8,14 +8,18 @@
 - 06_oos.R
 
 ## issues
-- update all files as per bel's slack message
+
+### prep
 - triple checks scores/years/grades/lags
 - double check lag mean computation
-- highschool: 
-  - need to partition credit in VA
-  - need to do shrinkage
-- start writing up analysis of the results
+
+### analysis
+- get info on the 5' and 5''' regressions (eg how many observations are being used for that? obs/grade?)
+- check that shrinkage looks ok for grade 11 schools
+- save 5''' residuals
+
+### reporting
+- need to aggregate schoolXgrade into a school-level result and compare that with the direct estimate
+
 - update _ela.Rdata and _math.Rdata files on nero for bel
 
-asked of group:
-- what are the student-level residuals that they want? are they from model 1 2 or 3? [will need to save these]
