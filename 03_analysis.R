@@ -52,7 +52,7 @@ x<-merge(z,x,by.x=1,by.y='id')
 
 coors<-list()
 for (v in vars) {
-    c1<-cor(x[,v],x$fe_ela,use='p')
-    c2<-cor(x[,v],x$fe_math,use='p')
+    c1<-weights::wtd.cor(x[,v],x$fe_ela,x$n_ela)[1]
+    c2<-weights::wtd.cor(x[,v],x$fe_math,x$n_math)[1]
     coors[[v]]<-c(c1,c2)
 }

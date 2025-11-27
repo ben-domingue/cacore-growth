@@ -17,9 +17,11 @@
 - get info on the 5' and 5''' regressions (eg how many observations are being used for that? obs/grade?)
 - check that shrinkage looks ok for grade 11 schools
 - save 5''' residuals
+- can i get (even a sample) of prior year growth results to make sure mine look coherent?
+- Weight correlations with prior year scores and delta
+
 
 ### reporting
 - need to aggregate schoolXgrade into a school-level result and compare that with the direct estimate
-
-- update _ela.Rdata and _math.Rdata files on nero for bel
+- update _ela.Rdata and _math.Rdata files on nero for bel  [for qc]
 
