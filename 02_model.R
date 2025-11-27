@@ -1,6 +1,8 @@
 
 growth<-function(df,reliability=0.9,sampling=NULL,g11) {
     library(mecor)
+    output<-list() #object to return
+########################################
     ##sampling
     if (!is.null(sampling)) {
         ids<-sample(unique(df$school_code),sampling)
@@ -9,8 +11,12 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
     z<-df[,c("school_code","scale_score","lag_scale_score","alt_lag_scale_score")]
     df0<-df[rowSums(is.na(z))==0,] #just for analysis
     rm("df") ##just to ensure i don't use it
+########################################
     std<-function(x) (x-mean(x,na.rm=TRUE))/sd(x,na.rm=TRUE)
     df0$scale_score<-std(df0$scale_score)
+    df0$lag_scale_score<-std(df0$lag_scale_score)
+    df0$alt_lag_scale_score<-std(df0$alt_lag_scale_score)
+########################################
     ##school matrix
     jrs<-df0[df0$grade==11,]
     oth<-df0[df0$grade<11,]
@@ -53,7 +59,7 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
     oth<-merge(oth,ss.oth[,nms])
     jrs<-merge(jrs,ss.jrs[,nms])
     df0<-data.frame(rbind(oth,jrs))
-    ##
+########################################
     ##Aditionally, all models control for disability, English language learner, economic disadvantage, foster care, and homelessness statuses at the student level. 
     fm.base<-c("disability_type",
                "ell_level",
@@ -78,6 +84,7 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
     ##special check
     if ("homeless__missing" %in% names(df0) & all(df0$homeless__missing==df0$foster__missing))
         fm.list<-fm.list[-grep("foster__missing",fm.list)]
+########################################
     ##build formula
     ii<-grep("^schoolid",names(df0))
     ii<-ii[-1] #to ensure no collinearity problem with schools
@@ -87,10 +94,16 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
         "+",
         paste(names(df0)[ii],collapse='+'),sep=''
     )
+########################################
     ##step 1
     m1<-mecor(as.formula(fm),df0)
     ##fm0<-gsub("MeasErrorRandom(lag_scale_score,var(lag_scale_score,na.rm=TRUE)*(1-reliability))","lag_scale_score",fm,fixed=TRUE)
     ##lm(as.formula(fm0),df0)
+    m1coef<-m1$corfit$coef
+    m1coef.noisy<-m1$uncorfit$coef
+    m1N<-length(m1$uncorfit$residuals)
+    output$m1<-list(m1coef=m1coef,m1coef.noisy=m1coef.noisy,m1N=m1N)
+########################################
     ##step 1.5: residualize
     co<-m1$corfit$coef
     fe<-grep("^schoolid_",names(co))
@@ -101,9 +114,13 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
     co0m<-matrix(co0,ncol=1)
     fit<-as.matrix(mm) %*% co0m
     df0$errors<-df0$scale_score-fit
+########################################
     ##step 2: regress pretest mean
     m2<-lm(errors~lag_mean,df0)
     df0$errors2<-m2$resid
+    m2coef<-coef(m2)
+    output$m2<-m2coef
+########################################
     ##step3: almost there!
     ii<-grep("^schoolid",names(df0))
     ii<-ii[-1] #to ensure no collinearity problem with schools
@@ -112,6 +129,11 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
         paste(names(df0)[ii],collapse='+'),sep=''
     )
     m3<-lm(as.formula(fm),df0)
+    m3coef<-coef(m3)
+    m3N<-length(m3$resid)
+    m3resid<-data.frame(id=df0$id,m3resid=m3$resid)
+    output$m3<-list(m3coef=m3coef,m3N=m3N,m3resid=m3resid)
+########################################
     ##standardize//shrink [see page 10 of core report re shrinkage]
     S<-summary(m3)$coef
     fe<-grep("^schoolid_",rownames(S))
@@ -123,6 +145,7 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
     out<-list()
     for (nm in nms) out[[nm]]<-sum(df0[[nm]])
     co$n<-unlist(out)
+########################################
     ## To implement this shrinkage, we estimate the sampling-error-adjusted variance of the
     ## unshrunk school growth measures 𝛼̂ 𝑗 . This is equal to the variance across schools of the
     ## estimates 𝛼̂ 𝑗 , minus the mean across schools of the squared standard errors 𝜎̂ 𝑗2 of those
@@ -139,37 +162,41 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
         co$eb.se<-co$se*(omega/(omega+co$se^2))
         return(co)
     }
-    ##
     shrink.matrix<-function(co,m3=m3) {
+        library(Hmisc)
         alpha<-matrix(co$fe,ncol=1)
-        mat<-vcov(m3)
-        ii<-match(rownames(co),rownames(mat))
-        sig<-mat[ii,ii]
+        ##compute omega
         var.alpha<-wtd.var(co$fe,co$n)
         mean.se<-wtd.mean(co$se^2,co$n)
         omega<-var.alpha-mean.se
+        ##
+        mat<-vcov(m3)
+        ii<-match(rownames(co),rownames(mat))
+        sig<-mat[ii,ii]
         I<-diag(nrow(sig))
-        co$eb<-(omega^2*I) %*% solve(omega^2*I+sig) %*% alpha
-        co$eb.se<-sqrt(diag((omega^2*I) %*% solve(omega^2*I+sig) %*% sig))
+        co$eb<- (omega*I) %*% solve(omega*I+sig) %*% alpha
+        co$eb.se<- sqrt(diag((omega*I) %*% solve(omega*I+sig) %*% sig))
         return(co)
     }
     ##
-    test<-grepl("__",rownames(co)) #figure out if this includes grade 11 estimates that need to be managed serparately
-    if (all(!test)) {
-        co<-shrink.univariate(co) ##for the school-wide estimates
-    } else {
-        ##for the schoolXgrade estimates
-        x1<-shrink.univariate(co[test,])
-        x2<-shrink.matrix(co[!test,],m3=m3)
-        co<-data.frame(rbind(x1,x2))
-    }
+    ## test<-grepl("__",rownames(co)) #figure out if this includes grade 11 estimates that need to be managed serparately
+    ## if (all(!test)) {
+    ##     co<-shrink.univariate(co) ##for the school-wide estimates
+    ## } else {
+    ##     ##for the schoolXgrade estimates
+    ##     x1<-shrink.univariate(co[test,])
+    ##     x2<-shrink.matrix(co[!test,],m3=m3)
+    ##     co<-data.frame(rbind(x1,x2))
+    ## }
+    co<-shrink.univariate(co)
+########################################
     ##conversion to percentiles
     m<-mean(co$eb)
     s<-sd(co$eb)
     co$per<-pnorm(co$eb,m,s)
-    co
-    ##
-    return(co)
+    output$coef<-co
+########################################
+    return(output)
 }
 
 load("_g11.Rdata")

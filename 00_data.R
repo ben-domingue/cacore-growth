@@ -32,15 +32,17 @@ keep<-c("district_code", "school_code", "school_name",
 
 for (nm in c("_ela","_math")) {
     print(nm)
-    ##Additionally, all models control for disability, English language learner, economic disadvantage, foster care, and homelessness statuses at the student level. 
+########################################
     i<-grep(nm,names(x))
     df<-x[,c(keep,names(x)[i])]
     names(df)<-sub(nm,'',names(df))
     schools<-df[,c("id","school_code","year","grade")] #save for computation of prior-year means
+########################################
     ##mucking with grades for 11
     df<-df[df$grade %in% c(3:8,11) & !is.na(df$grade),]
     df$pretest.year<-ifelse(df$grade==11,df$year-3,df$year-1)
-    ##lag score and prior year mean
+########################################
+    ##lag score
     xx<-c("id","year","grade")
     xx<-c(xx,ifelse(nm=="_ela","ela_scale_score","math_scale_score"))
     x0<-sc[,xx]
@@ -48,12 +50,14 @@ for (nm in c("_ela","_math")) {
     names(x0)[3]<-'pretest.grade'
     names(x0)[2]<-'pretest.year'
     names(x0)[3:4]<-paste("lag_",names(x0)[3:4],sep='')
+########################################
     ##alt lag
     if (nm=="_ela") altlag<-sc$math_scale_score else altlag<-sc$ela_scale_score
     x0$alt_lag_scale_score<-altlag
     ##
     x0<-x0[!is.na(x0$lag_scale_score),]
     df<-merge(df,x0,all.x=TRUE) #this will break grade 11
+########################################
     ##prior year mean
     xx<-c("id","year")
     xx<-c(xx,ifelse(nm=="_ela","ela_scale_score","math_scale_score"))
@@ -71,7 +75,7 @@ for (nm in c("_ela","_math")) {
     df$tmp.id<-paste(df$year,df$grade,df$school_code)
     df<-merge(df,z)
     df$tmp.id<-NULL
-    ##
+########################################
     df$subject<-nm
     save(df,file=paste(nm,".Rdata",sep=''))
 }
@@ -102,4 +106,4 @@ f<-function(x) {
 y<-lapply(L,f)
 g11<-data.frame(do.call("rbind",y))
 g11$id<-names(y)
-save(g11,file="_g11.Rdata")
+save(g11,file="_g11.Rdata") ##g11 contains the information needed to assign grade 11 fixed effects
