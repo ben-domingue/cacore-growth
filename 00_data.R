@@ -107,3 +107,23 @@ y<-lapply(L,f)
 g11<-data.frame(do.call("rbind",y))
 g11$id<-names(y)
 save(g11,file="_g11.Rdata") ##g11 contains the information needed to assign grade 11 fixed effects
+
+##2024
+x<-read.csv("grade-11-students-schools.csv")
+##only those in 11th grade the right year
+ids<-x$state_student_id[x$spring_year==2024 & x$grade_level_code==11]
+x<-x[x$state_student_id %in% ids,]
+##just the 3 years ending in 2024
+x<-x[x$spring_year %in% 2022:2024,]
+##
+L<-split(x,x$state_student_id)
+z<-sapply(L,function(x) paste(sort(x$spring_year),collapse=" "))
+table(z)/length(z)
+f<-function(x) {
+    i<-match(2022:2024,x$spring_year)
+    x$school_code[i]
+}
+y<-lapply(L,f)
+g11<-data.frame(do.call("rbind",y))
+g11$id<-names(y)
+save(g11,file="_g11_2024.Rdata") ##g11 contains the information needed to assign grade 11 fixed effects

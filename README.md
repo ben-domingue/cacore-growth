@@ -7,7 +7,8 @@
 - 03_analysis.R analysis of the growth estimates
 
 ## issues
-- need all shrinkage factors to be positive
+- compute 2024 results [problems with code at present]
 
-### questions
-- can i get (even a sample) of prior year growth results to make sure mine look coherent?
+- the m2 coefficients (specially the lagged mean) are pretty small. is something off? 
+- why are growth estimates so correlated with delta for just ela?
+- stability/precision/oos: bootstrap analyses? 

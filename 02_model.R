@@ -199,6 +199,7 @@ growth<-function(df,reliability=0.9,sampling=NULL,g11) {
     return(output)
 }
 
+
 load("_g11.Rdata")
 ##reliabilities, see table 8.3. https://www.cde.ca.gov/ta/tg/ca/documents/sbcaaspptechrpt24.docx
 reliabilities<-c(`_ela`=0.88,`_math`=0.9)
@@ -223,3 +224,21 @@ for (nm in c("_ela","_math")) {
 
 save(estimates,file="_estimates.Rdata")
 
+
+load("_g11_2024.Rdata")
+reliabilities<-c(`_ela`=0.88,`_math`=0.9)
+estimates<-list()
+for (nm in c("_ela","_math")) {
+    load(paste(nm,".Rdata",sep=''))
+    ##
+    df<-df[df$year==2024,]
+    df<-df[df$grade>3,]
+    ##analysis by schoolXgrade
+    print(2)
+    df$school_original<-df$school_code
+    df$school_code<-paste(df$school_original,df$grade,sep='__')
+    co.grade<-growth(df,reliability=reliabilities[nm],g11=g11,sampling=50)
+    ##
+    estimates[[nm]]<-list(co.grade=co.grade)
+}
+save(estimates,file="_estimates2024.Rdata")

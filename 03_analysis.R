@@ -28,10 +28,22 @@ for (i in 1:length(estimates)) {
 
 ################################################################
 ##shrinkage analysis
+par(mfrow=c(1,2),mgp=c(2,1,0),mar=c(3,3,1,1),oma=rep(1,4))
+for (i in 1:2) {
+    x<-grest[[1]][[2]]
+    s<-x$eb/x$fe
+    plot(log10(x$n),s,xlab="N",ylab="Shrinkage factor",xaxt='n',pch=19,col='blue',ylim=c(0,1))
+    vals<-c(1,10,50,100,250)
+    axis(side=1,at=log10(vals),vals)
+    mtext(side=3,line=0,names(grest)[i])
+}
+
 x<-grest[[1]][[2]]
 i<-grepl("__",rownames(x))
 s<-x$eb/x$fe
 by(s,i,summary)
+by(x$n,i,summary)
+by(x$se,i,summary)
 
 ################################################################
 ##Distribution
