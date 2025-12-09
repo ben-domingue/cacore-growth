@@ -12,7 +12,6 @@
 
 ## issues
 
-- produce estimates
 - need to do analysis for each subgroup
 
 

@@ -117,22 +117,24 @@ df<-df[df$year==2025,]
 df<-df[df$grade>3,]
 df$delta.math<-df$scale_score-df$lag_scale_score
 del<-df[,c("id","delta.math")]
+del$scale_score_math<-df$scale_score
+del$lag_scale_score_math<-df$lag_scale_score
 ##
 load("_ela.Rdata")
 df<-df[df$year==2025,]
 df<-df[df$grade>3,]
 ##df$school_code<-paste(df$school_code,df$grade,sep='__')
 df$delta.ela<-df$scale_score-df$lag_scale_score
+df$scale_score_ela<-df$scale_score
+df$lag_scale_score_ela<-df$lag_scale_score
 df<-merge(df,del,all.x=TRUE)
 vars<-c( #"free_or_reduced", 
-                                        #"homeless", "foster",
-                                        #"sped_flag", "elpac_level",
     "socioecon_disadvantaged", 
     "race_ai", "race_as", "race_aa", "race_fi", "race_hi", "race_mr", 
     "race_pi", "race_na", "race_wh", #"disability_type", 
-                                        #"ell_level",
-    "scale_score", 
-    "lag_scale_score","delta.math","delta.ela")
+    "scale_score_ela", "scale_score_math",
+    "lag_scale_score_ela","lag_scale_score_math",
+"delta.math","delta.ela")
 xx<-df[,vars]
 xx<-split(xx,df$school_code)
 xx<-lapply(xx,colMeans,na.rm=TRUE)
