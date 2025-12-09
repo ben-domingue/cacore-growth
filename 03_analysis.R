@@ -3,66 +3,103 @@ library(weights)
 
 ################################################################
 ##coefficients
-tab<-list()
-for (i in 1:length(estimates)) {
-    z1<-estimates[[i]]$co.grade$m1
-    co<-z1$m1coef
-    co<-co[!grepl("^schoolid_",names(co))]
-    m1<-c(co,c(z1$m1N,z1$m1coef.noisy[grep("^lag_scale_score",names(z1$m1coef.noisy))]))
-    m2<-estimates[[i]]$co.grade$m2
-    co<-estimates[[i]]$co.grade$m3$m3coef
-    co<-co[!grepl("^schoolid_",names(co))]
-    m3<-c(co,estimates[[i]]$co.grade$m3$m3N)
-    tab[[i]]<-c(m1,m2,m3)
+f<-function(estimates) {
+    tab<-list()
+    for (i in 1:length(estimates)) {
+        m1<-estimates[[i]]$m1
+        co<-m1$m1coef[!grepl("^schoolid_",names(m1$m1coef))]
+        m1<-c(co,c(N=m1$m1N,m1$m1coef.noisy[grep("^lag_scale_score",names(m1$m1coef.noisy))]))
+        m2<-estimates[[i]]$m2
+        m3<-estimates[[i]]$m3
+        #co<-m3$m3coef[!grepl("^schoolid_",rownames(m3$m3coef))]
+        m3<-c(N=m3$m3N)
+        tab[[i]]<-c(m1,m2,m3)
+    }
+    tab<-do.call("cbind",tab)
+    colnames(tab)<-names(estimates)
+    tab
 }
-tab<-do.call("cbind",tab)
-write.csv(tab,'')
+tabL<-lapply(estimates,f)
 
-################################################################
-grest<-list() ##get growth estimates `grest`
-for (i in 1:length(estimates)) {
-    z1<-estimates[[i]]$co$coef
-    z2<-estimates[[i]]$co.grade$coef
-    grest[[names(estimates)[i] ]]<-list(co=z1,co.grade=z2)
-}
-
-################################################################
-##shrinkage analysis
-par(mfrow=c(1,2),mgp=c(2,1,0),mar=c(3,3,1,1),oma=rep(1,4))
-for (i in 1:2) {
-    x<-grest[[1]][[2]]
-    s<-x$eb/x$fe
-    plot(log10(x$n),s,xlab="N",ylab="Shrinkage factor",xaxt='n',pch=19,col='blue',ylim=c(0,1))
-    vals<-c(1,10,50,100,250)
-    axis(side=1,at=log10(vals),vals)
-    mtext(side=3,line=0,names(grest)[i])
-}
-
-x<-grest[[1]][[2]]
-i<-grepl("__",rownames(x))
-s<-x$eb/x$fe
-by(s,i,summary)
-by(x$n,i,summary)
-by(x$se,i,summary)
+write.csv(rbind(tabL[["_ela"]],tabL[["_math"]]),'')
 
 ################################################################
 ##Distribution
+load("_sch.Rdata")
+
 par(mfcol=c(2,2),mgp=c(2,1,0),mar=c(3,3,1,1),oma=rep(1,4))
-for (i in 1:length(grest)) {
-    z<-grest[[i]]
-    plot(density(z[[2]]$eb),col='blue',lwd=2,main='',xlim=c(-.7,.7),xlab="EB estimates")
-    mtext(side=3,line=0,names(grest)[i])
-    hist(z[[2]]$per,col='blue',main='',xlab='Percentiles')
-    print(summary(z[[2]]$per))
+z<-sch
+##
+plot(density(z$eb_ela),col='blue',lwd=2,main='',xlim=c(-.3,.3),xlab="EB estimates")
+mtext(side=3,line=0,"ELA")
+hist(z$per_ela,col='blue',main='',xlab='Percentiles')
+##
+plot(density(z$eb_math),col='blue',lwd=2,main='',xlim=c(-.3,.3),xlab="EB estimates")
+mtext(side=3,line=0,"MATH")
+hist(z$per_math,col='blue',main='',xlab='Percentiles')
+
+
+################################################################
+##Grade-level correlations within school
+library(lme4)
+load("_estimates.Rdata")
+
+##
+f<-function(x) {
+    x<-x[-length(x)] #no grade 11
+    z<-lapply(x,function(x) x$coef)
+    z<-do.call("rbind",z)
+    txt<-strsplit(rownames(z),"schoolid_",fixed=TRUE)
+    txt<-sapply(txt,function(x) x[2])
+    z$id<-sapply(strsplit(txt,"__",fixed=TRUE),function(x) x[1])
+    lme4::lmer(eb~(1|id),z)
 }
+lapply(estimates,f)
+
+ ## Groups   Name        Std.Dev.
+ ## id       (Intercept) 0.0288  
+ ## Residual             0.1174  
+.0288^2/(.0288^2+.1174^2)
+
+ ## Groups   Name        Std.Dev.
+ ## id       (Intercept) 0.0199  
+ ## Residual             0.1347  
+.0199^2/(.0199^2+.1347^2)
+
+## ####adding delta
+load("_ela.Rdata")
+df<-df[df$year==2025,]
+df<-df[df$grade>3,]
+df$school_code<-paste(df$school_code,df$grade,sep='__')
+df$delta<-df$scale_score-df$lag_scale_score
+xx<-df[,"delta"]
+xx<-split(xx,df$school_code)
+xx<-lapply(xx,mean,na.rm=TRUE)
+x<-data.frame(do.call("rbind",xx))
+names(x)[1]<-"delta.ela"
+x$id<-names(xx)
+del<-x
+x<-estimates[[1]]
+x<-x[-length(x)] #no grade 11
+z<-lapply(x,function(x) x$coef)
+z<-do.call("rbind",z)
+z$id<-rownames(z)
+txt<-strsplit(z$id,".",fixed=TRUE)
+z$id<-sapply(txt,function(x) x[2])
+txt<-strsplit(rownames(z),"schoolid_",fixed=TRUE)
+z$id<-sapply(txt,function(x) x[2])
+z<-merge(z,del)
+z$id<-sapply(strsplit(z$id,"__",fixed=TRUE),function(x) x[1])
+lme4::lmer(delta.ela~(1|id),z)
+##9.9^2/(9.9^2+21.7^2)
+lme4::lmer(eb~(1|id),z)
+
 
 ################################################################
 ##Correlation across subjects
-z1<-grest[[1]]$co.grade
-names(z1)<-paste(names(z1),names(grest)[1],sep='')
-z2<-grest[[2]]$co.grade
-names(z2)<-paste(names(z2),names(grest)[2],sep='')
-z<-merge(z1,z2,by=0,all=TRUE)
+library(weights)
+load("_sch.Rdata")
+z<-sch
 coors<-list()
 coors$fe<-cor(z$fe_ela,z$fe_math)
 coors$wtfe<-wtd.cor(z$fe_ela,z$fe_math,z$n_ela)[1]
@@ -74,51 +111,19 @@ coors$wtper<-wtd.cor(z$per_ela,z$per_math,z$n_ela)[1]
 write.csv(unlist(coors))
 
 ################################################################
-##Grade-level correlations within school
-txt<-strsplit(z[,1],"_")
-z$id<-sapply(txt,function(x) x[2])
-library(lme4)
-##
-lmer(eb_ela~(1|id),z)
- ## Groups   Name        Std.Dev.
- ## id       (Intercept) 0.0448  
- ## Residual             0.1065  
-.0448^2/(.1065^2+.0448^2)
-##
-lmer(eb_math~(1|id),z)
- ## Groups   Name        Std.Dev.
- ## id       (Intercept) 0.0382  
- ## Residual             0.1175  
-.0382^2/(.0382^2+.1175^2)
-
-##aggregate to school-level
-L<-split(z,z$id)
-f<-function(x) {
-    m1<-Hmisc::wtd.mean(x$fe_ela,x$n_ela)
-    m2<-Hmisc::wtd.mean(x$eb_ela,x$n_ela)
-    m3<-Hmisc::wtd.mean(x$fe_math,x$n_math)
-    m4<-Hmisc::wtd.mean(x$eb_math,x$n_math)
-    c(fe.ela=m1,eb.ela=m2,fe.math=m3,eb.math=m4)
-}
-x<-t(sapply(L,f))
-x<-data.frame(id=paste("schoolid_",rownames(x),sep=''),x)
-
-z1<-estimates[[1]]$co$coef
-tmp<-merge(z1,x,by.x=0,by.y='id')
-cor(tmp$fe,tmp$fe.ela)
-cor(tmp$eb,tmp$eb.ela)
-z1<-estimates[[2]]$co$coef
-tmp<-merge(z1,x,by.x=0,by.y='id')
-cor(tmp$fe,tmp$fe.math)
-cor(tmp$eb,tmp$eb.math)
-
-################################################################
 ##Correlation with key categories
+load("_math.Rdata")
+df<-df[df$year==2025,]
+df<-df[df$grade>3,]
+df$delta.math<-df$scale_score-df$lag_scale_score
+del<-df[,c("id","delta.math")]
+##
 load("_ela.Rdata")
 df<-df[df$year==2025,]
 df<-df[df$grade>3,]
-df$school_code<-paste(df$school_code,df$grade,sep='__')
-df$delta<-df$scale_score-df$lag_scale_score
+##df$school_code<-paste(df$school_code,df$grade,sep='__')
+df$delta.ela<-df$scale_score-df$lag_scale_score
+df<-merge(df,del,all.x=TRUE)
 vars<-c( #"free_or_reduced", 
                                         #"homeless", "foster",
                                         #"sped_flag", "elpac_level",
@@ -127,13 +132,14 @@ vars<-c( #"free_or_reduced",
     "race_pi", "race_na", "race_wh", #"disability_type", 
                                         #"ell_level",
     "scale_score", 
-    "lag_scale_score","delta")
+    "lag_scale_score","delta.math","delta.ela")
 xx<-df[,vars]
 xx<-split(xx,df$school_code)
 xx<-lapply(xx,colMeans,na.rm=TRUE)
 x<-data.frame(do.call("rbind",xx))
-x$id<-paste("schoolid_",names(xx),sep='')
-x<-merge(z,x,by.x=1,by.y='id')
+x$id<-names(xx)
+load("_sch.Rdata")
+x<-merge(sch,x,by='id')
 
 coors<-list()
 for (v in vars) {

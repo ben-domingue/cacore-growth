@@ -1,4 +1,4 @@
-load("_sch.Rdata")
+load("_sch2024.Rdata")
 
 ## ##add prior year means for comparisons below
 ## load(paste("_ela.Rdata",sep=''))
@@ -44,43 +44,45 @@ legend("topleft",bty='n',title=expression(rho),legend=round(cor(z$per_ela,z$ea.e
 plot(z$per_math,z$ea.math,pch=19,cex=cex,xlab='mine',ylab='ea',main='math')
 legend("topleft",bty='n',title=expression(rho),legend=round(cor(z$per_math,z$ea.math,use='p'),4))
 
-###########################################
-###########################################
-###########################################
-###########################################
-###########################################
-##sleuthing below
-###########################################
-##sample sizes
-##bunch of schools with very different sample sizes [but not the driver of difference]
-plot(z$n,z$denominator); abline(0,1)
-delta<-z$n-z$denominator
 
-flag<-delta< -100
-plot(z$per.ela,z$ea.ela,col=ifelse(flag,'red','black'),pch=19)
 
-##what is going on here?
-load("_ela.Rdata")
-tmp<-df[df$school_code %in% as.numeric(z$id[flag]),]
-unique(tmp$school_name) #almost all high schools
-par(mfrow=c(1,2))
-plot(z$mean.lag[flag],z$avg_ss_pre[flag]); abline(0,1)
-plot(z$mean.scale[flag],z$avg_ss_post[flag]); abline(0,1)
+## ###########################################
+## ###########################################
+## ###########################################
+## ###########################################
+## ###########################################
+## ##sleuthing below
+## ###########################################
+## ##sample sizes
+## ##bunch of schools with very different sample sizes [but not the driver of difference]
+## plot(z$n,z$denominator); abline(0,1)
+## delta<-z$n-z$denominator
 
-load("_ela.Rdata")
-i<-which(df$school_code=="101337")
+## flag<-delta< -100
+## plot(z$per.ela,z$ea.ela,col=ifelse(flag,'red','black'),pch=19)
 
-###########################################
-##same schools in english and math? yeah mostly
-f1<-z$per.ela*100-z$ea.ela
-f2<-z$per.math*100-z$ea.math
-plot(f1,f2)
+## ##what is going on here?
+## load("_ela.Rdata")
+## tmp<-df[df$school_code %in% as.numeric(z$id[flag]),]
+## unique(tmp$school_name) #almost all high schools
+## par(mfrow=c(1,2))
+## plot(z$mean.lag[flag],z$avg_ss_pre[flag]); abline(0,1)
+## plot(z$mean.scale[flag],z$avg_ss_post[flag]); abline(0,1)
 
-hist(f1)
+## load("_ela.Rdata")
+## i<-which(df$school_code=="101337")
 
-###########################################
-##comparison of pre/post tests: they look great!
-par(mfrow=c(1,2))
-plot(z$mean.scale,z$avg_ss_post); abline(0,1)
-plot(z$mean.lag,z$avg_ss_pre); abline(0,1)
+## ###########################################
+## ##same schools in english and math? yeah mostly
+## f1<-z$per.ela*100-z$ea.ela
+## f2<-z$per.math*100-z$ea.math
+## plot(f1,f2)
+
+## hist(f1)
+
+## ###########################################
+## ##comparison of pre/post tests: they look great!
+## par(mfrow=c(1,2))
+## plot(z$mean.scale,z$avg_ss_post); abline(0,1)
+## plot(z$mean.lag,z$avg_ss_pre); abline(0,1)
 
