@@ -39,3 +39,26 @@ r2<-data.frame(do.call("rbind",r2))
 names(r2)[2]<-"_math"
 r<-merge(r1,r2)
 write.csv(r,file="/tmp/residual.csv",quote=FALSE,row.names=FALSE)
+
+################################################################
+##subgroup
+load("_difffx.Rdata")
+
+##output estimates
+f<-function(out) {
+    z<-lapply(out,function(x) x$coef)
+    for (i in 1:length(z)) {
+        x<-z[[i]]
+        x$id<-rownames(x)
+        x$group<-names(z)[i]
+        z[[i]]<-x
+    }
+    z<-do.call('rbind',z)
+    z
+}
+tab1<-f(estimates[["_ela"]])
+tab1$subject<-"ELA"
+tab2<-f(estimates[["_math"]])
+tab2$subject<-"Math"
+x<-data.frame(rbind(tab1,tab2))
+write.csv(x,'/tmp/diff.csv',quote=FALSE,row.names=FALSE)

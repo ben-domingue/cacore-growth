@@ -63,7 +63,6 @@ for (nm in c("_ela","_math")) {
                                         reliability=reliabilities[nm],g11=g11,
                                         fm.edit=fm.list[[i]][[1]]
                                         )
-        save(out,file="/tmp/difffx.Rdata")
     }
     ##
     estimates[[nm]]<-out
@@ -71,21 +70,22 @@ for (nm in c("_ela","_math")) {
 
 save(estimates,file="_difffx.Rdata")
 
+######################################################
+load("_difffx.Rdata")
 
 ##analysis
-                                        #out
 f<-function(x) {
     n<-x$m3$m3N
     lag<-as.numeric(x$m1$m1coef[2])
     ns<-nrow(x$coef)
     sig<-sd(x$coef$eb)
-    c(n=n,ns=ns,lag=lag,sig=sig)
+    shr=min(x$coef$eb/x$coef$fe,na.rm=TRUE)
+    c(n=n,ns=ns,lag=lag,sig=sig,shrink=shr)
 }
-tab<-lapply(out,f)
-tab<-do.call("rbind",tab)
+#do.call("rbind",lapply(out,f))
 
-                                        #note for doc
-
-##split as in the code
-##updated formula
-##computed based on whole-school not school-grade
+tab<-lapply(estimates[["_ela"]],f)
+tab1<-do.call("rbind",tab)
+tab<-lapply(estimates[["_math"]],f)
+tab2<-do.call("rbind",tab)
+write.csv(rbind(tab1,tab2)[,-5])
