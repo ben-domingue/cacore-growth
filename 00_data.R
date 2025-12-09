@@ -45,11 +45,14 @@ for (nm in c("_ela","_math")) {
     ##lag score
     xx<-c("id","year","grade")
     xx<-c(xx,ifelse(nm=="_ela","ela_scale_score","math_scale_score"))
+    xx<-c(xx,ifelse(nm=="_ela","ela_achievement_level","math_achievement_level"))
     x0<-sc[,xx]
     names(x0)[4]<-'scale_score'
+    names(x0)[5]<-'achievement_level'
+    x0$achievement_level<-ifelse(x0$achievement_level==9,NA,x0$achievement_level)
     names(x0)[3]<-'pretest.grade'
     names(x0)[2]<-'pretest.year'
-    names(x0)[3:4]<-paste("lag_",names(x0)[3:4],sep='')
+    names(x0)[3:5]<-paste("lag_",names(x0)[3:5],sep='')
 ########################################
     ##alt lag
     if (nm=="_ela") altlag<-sc$math_scale_score else altlag<-sc$ela_scale_score
