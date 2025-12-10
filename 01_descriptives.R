@@ -42,4 +42,4 @@ nrow(df)
 length(unique(df$school_code))
 
 tab<-rbind(r,m)
-write.csv(tab,'')
+write.csv(tab,'',quote=FALSE,row.names=FALSE)

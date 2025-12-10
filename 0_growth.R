@@ -21,7 +21,9 @@ growth<-function(df,reliability=0.9,g11,
     ##school matrix [the below is somewhat hacky as was originally designed to split into two groups (<11 and 11). now that things are entirely separate there is no harmonization that needs to be done.
     jrs<-df0[df0$grade==11,]
     oth<-df0[df0$grade<11,]
-    if (nrow(oth)>0) {
+    n.oth<-nrow(oth)
+    n.jrs<-nrow(jrs)
+   if (n.oth>0) {
         f<-function(df0) { #for oth
             ids<-unique(df0$school_code)
             ss<-data.frame(matrix(0,nrow=nrow(df0),ncol=length(ids)))
@@ -32,7 +34,7 @@ growth<-function(df,reliability=0.9,g11,
         ss.oth<-f(oth)
         ss.oth$id<-oth$id
     } 
-    if (nrow(jrs)>0) {
+    if (n.jrs>0) {
         ##now juniors
         f<-function(jrs,g11) {
             g11.tmp<-g11[g11$id %in% jrs$id,]
@@ -54,16 +56,20 @@ growth<-function(df,reliability=0.9,g11,
         ss.jrs<-f(jrs,g11)
     }
     ##put in spare columns, merge in ss, and the recombine
-    n1<-names(ss.oth)
-    n2<-names(ss.jrs)
-    nms<-union(n1,n2)
-    for (nm in nms) {
-        if (!(nm %in% n1)) ss.oth[,nm]<-0
-        if (!(nm %in% n2)) ss.jrs[,nm]<-0
+    if (n.oth>0 & n.jrs>0) {
+        n1<-names(ss.oth)
+        n2<-names(ss.jrs)
+        nms<-union(n1,n2)
+        for (nm in nms) {
+            if (!(nm %in% n1)) ss.oth[,nm]<-0
+            if (!(nm %in% n2)) ss.jrs[,nm]<-0
+        }
+        oth<-merge(oth,ss.oth[,nms])
+        jrs<-merge(jrs,ss.jrs[,nms])
+        df0<-data.frame(rbind(oth,jrs))
     }
-    oth<-merge(oth,ss.oth[,nms])
-    jrs<-merge(jrs,ss.jrs[,nms])
-    df0<-data.frame(rbind(oth,jrs))
+    if (n.jrs==0) df0<-merge(oth,ss.oth)
+    if (n.oth==0) df0<-merge(jrs,ss.jrs)
 ########################################
     ##Aditionally, all models control for disability, English language learner, economic disadvantage, foster care, and homelessness statuses at the student level. 
     fm.base<-c("disability_type",
@@ -92,7 +98,7 @@ growth<-function(df,reliability=0.9,g11,
             fm.list[new.nm]<-new.nm
         }
     }
-    ##special check
+    ##special check ##rare collinearity problems
     if ("homeless__missing" %in% names(df0) & all(df0$homeless__missing==df0$foster__missing))
         fm.list<-fm.list[-grep("foster__missing",fm.list)]
 ########################################
@@ -130,7 +136,8 @@ growth<-function(df,reliability=0.9,g11,
     m2<-lm(errors~lag_mean,df0)
     df0$errors2<-m2$resid
     m2coef<-coef(m2)
-    output$m2<-m2coef
+    m2q<-df0[,c("id","errors2")]
+    output$m2<-list(m2coef=m2coef,m2q=m2q)
 ########################################
     ##step3: almost there!
     ii<-grep("^schoolid",names(df0))
@@ -164,7 +171,6 @@ growth<-function(df,reliability=0.9,g11,
         var.alpha<-wtd.var(co$fe,co$n)
         mean.se<-wtd.mean(co$se^2,co$n)
         omega<-var.alpha-mean.se
-        print(omega)
         co$eb<-co$fe*(omega/(omega+co$se^2))
         co$eb.se<-co$se*(omega/(omega+co$se^2))
         return(co)
@@ -176,7 +182,6 @@ growth<-function(df,reliability=0.9,g11,
         var.alpha<-wtd.var(co$fe,co$n)
         mean.se<-wtd.mean(co$se^2,co$n)
         omega<-var.alpha-mean.se
-        print(omega)
         ##
         mat<-vcov(m3)
         ii<-match(rownames(co),rownames(mat))
@@ -195,6 +200,5 @@ growth<-function(df,reliability=0.9,g11,
     co$per<-pnorm(co$eb,m,s)
     output$coef<-co
 ########################################
-    print(summary(co$eb/co$fe))
     return(output)
 }

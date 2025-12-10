@@ -10,7 +10,7 @@ bigfun<-function(est) {
         out<-list()
         df0<-xx$m3resid
         n<-table(df0$school_code)
-        n<-data.frame(id=names(n),n=as.numeric(n))
+        n<-data.frame(id=gsub("__11","",names(n),fixed=TRUE),n=as.numeric(n))
         co<-merge(co,n)
         co
     }
@@ -20,33 +20,7 @@ bigfun<-function(est) {
     ## ##averaging
     txt<-strsplit(df$id,"__",fixed=TRUE)
     df$id<-sapply(txt,function(x) x[1])
-    L<-split(df,df$id)
-    f<-function(x) {
-        ##m<-Hmisc::wtd.mean(x$fe,x$n,na.rm=TRUE)
-        m<-mean(x$fe,na.rm=TRUE)
-        s<-mean(x$se)##sqrt(sum(x$se^2))
-        data.frame(id=unique(x$id),fe=m,se=s,n=sum(x$n))
-    }
-    L<-lapply(L,f)
-    co<-data.frame(do.call("rbind",L))
-    ##shrinking
-    shrink.univariate<-function(co) {
-        library(Hmisc)
-        var.alpha<-wtd.var(co$fe,co$n)
-        mean.se<-wtd.mean(co$se^2,co$n)
-        omega<-var.alpha-mean.se
-        print(omega)
-        co$eb<-co$fe*(omega/(omega+co$se^2))
-        co$eb.se<-co$se*(omega/(omega+co$se^2))
-        return(co)
-    }
-    co<-shrink.univariate(co)
-########################################
-    ##conversion to percentiles
-    m<-mean(co$eb,na.rm=TRUE)
-    s<-sd(co$eb,na.rm=TRUE)
-    co$per<-pnorm(co$eb,m,s)
-    return(co)
+    agg(df)
 }
 
 load("_estimates.Rdata")
@@ -60,3 +34,24 @@ sch<-lapply(estimates,bigfun)
 for (i in 1:2) names(sch[[i]])[-1]<-paste(names(sch[[i]])[-1],names(sch)[i],sep='')
 sch<-merge(sch[[1]],sch[[2]],by='id',all=TRUE)
 save(sch,file="_sch2024.Rdata")
+
+
+
+##school-level
+load("_estimates.Rdata")
+z<-estimates[[1]]
+z<-lapply(z,function(x) x$coef)
+z<-do.call("rbind",z)
+y<-strsplit(rownames(z),"schoolid_",fixed=TRUE)
+y<-sapply(y,function(x) x[2])
+y2<-strsplit(y,"__",fixed=TRUE)
+id<-sapply(y2,function(x) x[1])
+gr<-sapply(y2,function(x) x[2])
+df<-data.frame(id=id,gr=gr)
+df$gr<-ifelse(is.na(df$gr),11,df$gr)
+L<-split(df,df$id)
+f<-function(x) paste(as.numeric(x$gr),collapse='.')
+levs<-sapply(L,f)
+tab<-table(levs)
+z<-data.frame(as.numeric(tab),names(tab))
+write.csv(z,'',quote=F,row.names=F)

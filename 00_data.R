@@ -60,6 +60,10 @@ for (nm in c("_ela","_math")) {
     ##
     x0<-x0[!is.na(x0$lag_scale_score),]
     df<-merge(df,x0,all.x=TRUE) #this will break grade 11
+#######################################
+    ##foster and homeless
+    df$foster<-ifelse(is.na(df$foster),0,df$foster)
+    df$homeless<-ifelse(is.na(df$homeless),0,df$homeless)
 ########################################
     ##prior year mean
     xx<-c("id","year")
@@ -90,8 +94,8 @@ table(df$l1_scale_score==df$lag_scale_score)
 load("_math.Rdata")
 table(df$l1_scale_score==df$lag_scale_score)
 
-
-##the dang juniors
+####################################################################################
+##the juniors
 x<-read.csv("grade-11-students-schools.csv")
 ##only those in 11th grade the right year
 ids<-x$state_student_id[x$spring_year==2025 & x$grade_level_code==11]

@@ -9,7 +9,7 @@ f<-function(estimates) {
         m1<-estimates[[i]]$m1
         co<-m1$m1coef[!grepl("^schoolid_",names(m1$m1coef))]
         m1<-c(co,c(N=m1$m1N,m1$m1coef.noisy[grep("^lag_scale_score",names(m1$m1coef.noisy))]))
-        m2<-estimates[[i]]$m2
+        m2<-estimates[[i]]$m2$m2coef
         m3<-estimates[[i]]$m3
         #co<-m3$m3coef[!grepl("^schoolid_",rownames(m3$m3coef))]
         m3<-c(N=m3$m3N)
