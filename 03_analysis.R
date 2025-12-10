@@ -56,15 +56,8 @@ f<-function(x) {
 }
 lapply(estimates,f)
 
- ## Groups   Name        Std.Dev.
- ## id       (Intercept) 0.0288  
- ## Residual             0.1174  
-.0288^2/(.0288^2+.1174^2)
-
- ## Groups   Name        Std.Dev.
- ## id       (Intercept) 0.0199  
- ## Residual             0.1347  
-.0199^2/(.0199^2+.1347^2)
+.0292^2/(.0292^2+.1167^2)
+.0209^2/(.0209^2+.1348^2)
 
 ## ####adding delta
 load("_ela.Rdata")

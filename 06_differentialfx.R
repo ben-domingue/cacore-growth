@@ -4,6 +4,8 @@
 ## for each class of subgroups. In other words, the subgroup analysis conducted for the set of
 ## race subgroups is separate from the analysis conducted for the set of disability subgroups.
 
+source("/home/bdomingu/Dropbox/projects/ca_growth/src/0_aggregate.R")
+##
 load("_estimates.Rdata")
 load("_boot2.Rdata")
 ##
@@ -61,7 +63,7 @@ getavg<-function(x.all,wtmat,ss=FALSE) {
 }
 
     
-agg<-function(x,res,shoe) {
+agg.local<-function(x,res,shoe) {
     x$school<-x$school_code
     x$school_code<-paste(x$school_code,x$grade,sep='__')
     ##get average fe
@@ -88,10 +90,12 @@ agg<-function(x,res,shoe) {
     z<-merge(z,om)
     z<-z[z$n>1,]
     ##
-    return(z)
+    z$id<-z$school_code
+    co<-agg(z)
+    merge(co,z[,c("id","scale_mean","lag_mean","boot.m")])
 }
 
-parfun<-function(x,res,shoe) agg(x,res=res,shoe=shoe)
+parfun<-function(x,res,shoe) agg.local(x,res=res,shoe=shoe)
 
 out<-list()
 for (nm in c("_ela","_math")) {
@@ -142,6 +146,7 @@ for (nm in c("_ela","_math")) {
 }
 hold<-out
 
+
 for (i in 1:length(out)) out[[i]]<-data.frame(do.call("rbind",out[[i]]))
 dfx<-data.frame(do.call("rbind",out))
 save(dfx,file="_difffx.Rdata")
@@ -152,34 +157,9 @@ write.csv(dfx,'/tmp/diff.csv',quote=FALSE,row.names=FALSE)
 ##compare to "direct" school effects (that come from 02b_)
 load("_difffx.Rdata")
 z<-dfx[dfx$subject=="_ela" & dfx$group=="all.all",]
-avg<-function(df) {
-    txt<-strsplit(df$school_code,"__",fixed=TRUE)
-    df$id<-sapply(txt,function(x) x[1])
-    L<-split(df,df$id)
-    f<-function(x) {
-        m<-Hmisc::wtd.mean(x$fe,x$n,na.rm=TRUE)
-        N<-sum(x$n)
-        nn<-(x$n/N)^2
-        s<-sqrt(sum(nn*x$se^2))
-        data.frame(id=unique(x$id),fe=m,se=s,n=sum(x$n))
-    }
-    L<-lapply(L,f)
-    co<-data.frame(do.call("rbind",L))
-    ##shrinking
-    shrink.univariate<-function(co) {
-        library(Hmisc)
-        var.alpha<-wtd.var(co$fe,co$n)
-        mean.se<-wtd.mean(co$se^2,co$n)
-        omega<-var.alpha-mean.se
-        print(omega)
-        co$eb<-co$fe*(omega/(omega+co$se^2))
-        co$eb.se<-co$se*(omega/(omega+co$se^2))
-        return(co)
-    }
-    co<-shrink.univariate(co)
-    co
-}
-co<-avg(z)
+txt<-strsplit(z$id,"__")
+z$id<-sapply(txt,function(x) x[1])
+co<-agg(z)
 z<-co[,c("id","fe","eb","se","n")]
 ##
 load("_sch.Rdata")
@@ -198,13 +178,3 @@ plot(y$n,fitted(m),type='l')
 m<-loess(se_ela~n,y)
 lines(y$n,fitted(m),col='red')
 
-
-##what schools are dropping out?
-xi<-x$id
-zi<-z$id
-##
-xt<-x[x$id %in% xi[!xi %in% zi],]
-summary(xt$n) ##all small schools
-##
-zt<-z[z$id %in% zi[!zi %in% xi],]
-summary(zt$n)

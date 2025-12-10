@@ -37,28 +37,19 @@ names(r1)[2]<-"_ela"
 r2<-lapply(estimates[[2]],f)
 r2<-data.frame(do.call("rbind",r2))
 names(r2)[2]<-"_math"
-r<-merge(r1,r2)
-write.csv(r,file="/tmp/residual.csv",quote=FALSE,row.names=FALSE)
+r<-merge(r1,r2,all.x=TRUE)
+write.csv(r,file="/tmp/residual3.csv",quote=FALSE,row.names=FALSE)
 
-## ################################################################
-## ##subgroup
-## load("_difffx.Rdata")
+load("_estimates.Rdata")
+f<-function(x) x$m2$m2q
+r1<-lapply(estimates[[1]],f)
+r1<-data.frame(do.call("rbind",r1))
+names(r1)[2]<-"_ela"
+r2<-lapply(estimates[[2]],f)
+r2<-data.frame(do.call("rbind",r2))
+names(r2)[2]<-"_math"
+r<-merge(r1,r2,all.x=TRUE)
+write.csv(r,file="/tmp/residual2.csv",quote=FALSE,row.names=FALSE)
 
-## ##output estimates
-## f<-function(out) {
-##     z<-lapply(out,function(x) x$coef)
-##     for (i in 1:length(z)) {
-##         x<-z[[i]]
-##         x$id<-rownames(x)
-##         x$group<-names(z)[i]
-##         z[[i]]<-x
-##     }
-##     z<-do.call('rbind',z)
-##     z
-## }
-## tab1<-f(estimates[["_ela"]])
-## tab1$subject<-"ELA"
-## tab2<-f(estimates[["_math"]])
-## tab2$subject<-"Math"
-## x<-data.frame(rbind(tab1,tab2))
-## write.csv(x,'/tmp/diff.csv',quote=FALSE,row.names=FALSE)
+
+
